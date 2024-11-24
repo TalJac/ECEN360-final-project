@@ -1,37 +1,21 @@
 import React, { useState } from 'react';
 import { Button, Typography, CircularProgress, FormControl, Box, IconButton } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { storage, db } from '../config/firebase';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { doc, setDoc } from 'firebase/firestore';
+import { storage } from '../config/firebase';
+import { ref as storageRef, uploadBytes, getDownloadURL, updateMetadata } from 'firebase/storage';
 import { useNavigate } from 'react-router-dom';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import ASL from '../components/photos/ASL.png';
 
 const custTheme = createTheme({
   palette: {
-    primary: {
-      main: '#500000', // Texas A&M maroon
-    },
-    secondary: {
-      main: '#FFFFFF', // White for contrast
-    },
+    primary: { main: '#500000' },
+    secondary: { main: '#FFFFFF' },
   },
   typography: {
-    h4: {
-      fontWeight: 'bold',
-      color: '#500000',
-      fontSize: 'clamp(1.5rem, 2vw, 2.5rem)', // Responsive font size
-      whiteSpace: 'nowrap', // Prevents text wrap
-    },
-    body1: {
-      fontSize: 'clamp(1rem, 1.5vw, 1.2rem)', // Responsive font size
-      color: '#500000',
-      whiteSpace: 'nowrap', // Prevents text wrap
-    },
-    button: {
-      fontSize: '1.1rem',
-    },
+    h4: { fontWeight: 'bold', color: '#500000', fontSize: 'clamp(1.5rem, 2vw, 2.5rem)' },
+    body1: { fontSize: 'clamp(1rem, 1.5vw, 1.2rem)', color: '#500000' },
+    button: { fontSize: '1.1rem' },
   },
 });
 
@@ -52,6 +36,30 @@ export default function Homepage() {
     }
   };
 
+  const sendToFlaskServer = async (file, imageName) => {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('name', imageName);
+
+    try {
+      const response = await fetch('https://vocal-completely-shark.ngrok-free.app/predict', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (response.ok) {
+        const responseJson = await response.json();
+        return responseJson.prediction;
+      } else {
+        console.error('Flask server error:', response.status);
+        return null;
+      }
+    } catch (error) {
+      console.error('Error sending to Flask server:', error);
+      throw error;
+    }
+  };
+
   const handleUpload = async () => {
     if (!file) {
       alert('Please select an image');
@@ -63,21 +71,41 @@ export default function Homepage() {
 
     try {
       setLoading(true);
-      await uploadBytes(fileRef, file);
-      const imageUrl = await getDownloadURL(fileRef);
-      console.log('Image successfully uploaded with name:', imageName);
 
-      const docRef = doc(db, `uploads/${imageName}`);
-      await setDoc(docRef, {
-        imageName,
-        uploadDate: new Date().toISOString(),
-      });
+      // Upload the file with initial metadata
+      const initialMetadata = {
+        customMetadata: {
+          uploadDate: new Date().toISOString(),
+        },
+      };
+
+      await uploadBytes(fileRef, file, initialMetadata);
+      const imageUrl = await getDownloadURL(fileRef);
+
+      console.log('Image uploaded with name:', imageName);
+
+      // Send image to Flask server for prediction
+      const prediction = await sendToFlaskServer(file, imageName);
+
+      if (prediction) {
+        // Update the file metadata with the prediction
+        const updatedMetadata = {
+          customMetadata: {
+            uploadDate: new Date().toISOString(),
+            prediction, // Add prediction to metadata
+          },
+        };
+        await updateMetadata(fileRef, updatedMetadata);
+
+        console.log('Prediction added to metadata:', prediction);
+
+        // Navigate to the results page
+        navigate('/resultspage', { state: { imageName, imageUrl, prediction } });
+      } else {
+        alert('Prediction failed or not returned.');
+      }
 
       setLoading(false);
-      
-      navigate('/resultspage', {
-        state: { imageName, imageUrl, timestamp: new Date().toISOString() },
-      });
     } catch (error) {
       setLoading(false);
       console.error('Error uploading file:', error);
@@ -132,7 +160,7 @@ export default function Homepage() {
               boxShadow: '0px 0px 10px rgba(0, 0, 0, 0.1)',
             }}
           />
-          <Typography variant="body2" sx={{ mt:-1, mb: 2 }}>
+          <Typography variant="body2" sx={{ mt: -1, mb: 2 }}>
             * All letters of the alphabet are included except for “j” and “z”
           </Typography>
 
