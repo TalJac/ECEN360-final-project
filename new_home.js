@@ -42,7 +42,7 @@ export default function Homepage() {
     formData.append('name', imageName);
 
     try {
-      const response = await fetch('https://ruling-singular-barnacle.ngrok-free.app/predict', {
+      const response = await fetch('https://vocal-completely-shark.ngrok-free.app/predict', {
         method: 'POST',
         body: formData,
       });
