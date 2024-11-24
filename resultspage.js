@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import { Typography, Box, Card, CardMedia, CardContent, Grid, IconButton } from '@mui/material';
@@ -6,36 +6,21 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
 const custTheme = createTheme({
   palette: {
-    primary: {
-      main: '#500000',
-    },
+    primary: { main: '#500000' },
   },
   typography: {
-    h4: {
-      fontWeight: 'bold',
-      color: '#500000',
-      fontSize: 'clamp(1.5rem, 2vw, 2.5rem)', // Responsive font size
-    },
-    body1: {
-      fontSize: 'clamp(1rem, 1.5vw, 1.2rem)', // Responsive font size
-      color: '#500000',
-    },
-    button: {
-      fontSize: '1.1rem',
-    },
+    h4: { fontWeight: 'bold', color: '#500000', fontSize: 'clamp(1.5rem, 2vw, 2.5rem)' },
+    body1: { fontSize: 'clamp(1rem, 1.5vw, 1.2rem)', color: '#500000' },
   },
 });
 
 export default function Resultspage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { imageUrl, timestamp } = location.state || {};
+  const { imageUrl, prediction, timestamp } = location.state || {};
 
-  const [results] = useState(
-    imageUrl
-      ? [{ imageUrl, timestamp: timestamp || new Date().toISOString() }]
-      : []
-  );
+  // Ensure the timestamp is valid
+  const formattedTimestamp = timestamp ? new Date(timestamp).toLocaleString() : new Date().toLocaleString();
 
   return (
     <ThemeProvider theme={custTheme}>
@@ -72,41 +57,37 @@ export default function Resultspage() {
           </Typography>
           <Box sx={{ width: '100%', height: '3px', backgroundColor: '#500000', mb: 3 }} />
 
-          <Grid container spacing={3} justifyContent="center">
-            {results.length > 0 ? (
-              results.map((result, index) => (
-                <Grid item xs={12} key={index}>
-                  <Card
-                    sx={{
-                      width: '100%',
-                      maxWidth: '400px',
-                      margin: 'auto',
-                      boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.15)',
-                      borderRadius: 2,
-                    }}
-                  >
-                    <CardMedia
-                      component="img"
-                      height="350" 
-                      image={result.imageUrl} 
-                      alt="Uploaded Prediction Result"
-                      sx={{
-                        objectFit: 'contain', // Fit the entire image within the card
-                        backgroundColor: '#F5F5F5',
-                      }}
-                    />
-                    <CardContent>
-                      <Typography variant="body2">
-                        {new Date(result.timestamp).toLocaleString()}
-                      </Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))
-            ) : (
-              <Typography variant="body1" sx={{ mt: 4 }}>No images uploaded</Typography>
-            )}
-          </Grid>
+          {imageUrl && (
+            <Card
+              sx={{
+                width: '100%',
+                maxWidth: '400px',
+                margin: 'auto',
+                boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.15)',
+                borderRadius: 2,
+              }}
+            >
+              <CardMedia
+                component="img"
+                height="350"
+                image={imageUrl}
+                alt="Uploaded Prediction Result"
+                sx={{ objectFit: 'contain', backgroundColor: '#F5F5F5' }}
+              />
+              <CardContent>
+                <Typography variant="body2">{formattedTimestamp}</Typography>
+                <Typography variant="body1" sx={{ mt: 2, fontWeight: 'bold' }}>
+                  Predicted Class: {prediction}
+                </Typography>
+              </CardContent>
+            </Card>
+          )}
+
+          {!imageUrl && (
+            <Typography variant="body1" sx={{ mt: 4 }}>
+              No images uploaded
+            </Typography>
+          )}
         </Box>
       </Box>
     </ThemeProvider>
