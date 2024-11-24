@@ -17,7 +17,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Firebase Admin SDK initialization
-cred = credentials.Certificate("/home/tjac/Desktop/360_project/ecen-360-final-project-firebase-adminsdk-euuga-baffde5544.json")  # Update with your Firebase Admin SDK JSON file
+cred = credentials.Certificate(r"/home/tjac/Desktop/360_project/ecen-360-final-project-firebase-adminsdk-euuga-baffde5544.json")  # Update with your Firebase Admin SDK JSON file
 firebase_admin.initialize_app(cred, {
     'storageBucket': 'ecen-360-final-project.appspot.com'  # Replace with your Firebase bucket name
 })
@@ -71,7 +71,7 @@ print(f"Class Names: {class_names}")
 # Load the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = ColorDepthCNN(num_classes=len(class_names)).to(device)
-model.load_state_dict(torch.load("/home/tjac/Desktop/360_project/best_model_with_invalid.pth", map_location=device))
+model.load_state_dict(torch.load(r"/home/tjac/Desktop/360_project/best_rgb_model_with_invalid.pth", map_location=device))
 model.eval()
 
 # Define the image transformations
@@ -80,12 +80,18 @@ transform = transforms.Compose([
     transforms.ToTensor(),
 ])
 
-# Function to load and preprocess image
+# Function to load and preprocess the image
 def load_image(image_file):
     try:
         image_stream = io.BytesIO(image_file.read())
-        image = Image.open(image_stream).convert("RGB")
-        return transform(image).unsqueeze(0)
+        image = Image.open(image_stream).convert("RGB")  # Ensure RGB format
+        image_tensor = transform(image)
+
+        # Add a dummy depth channel (zeros)
+        depth_channel = torch.zeros((1, image_tensor.shape[1], image_tensor.shape[2]))
+        image_with_depth = torch.cat((image_tensor, depth_channel), dim=0)
+
+        return image_with_depth.unsqueeze(0)  # Add batch dimension
     except Exception as e:
         print(f"Error loading image: {e}")
         return None
