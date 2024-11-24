@@ -17,7 +17,7 @@ app = Flask(__name__)
 CORS(app)
 
 # Firebase Admin SDK initialization
-cred = credentials.Certificate(r"C:\Users\gustavo\Downloads\ecen-360-final-project-firebase-adminsdk-euuga-baffde5544.json")  # Update with your Firebase Admin SDK JSON file
+cred = credentials.Certificate("/home/tjac/Desktop/360_project/ecen-360-final-project-firebase-adminsdk-euuga-baffde5544.json")  # Update with your Firebase Admin SDK JSON file
 firebase_admin.initialize_app(cred, {
     'storageBucket': 'ecen-360-final-project.appspot.com'  # Replace with your Firebase bucket name
 })
@@ -71,7 +71,7 @@ print(f"Class Names: {class_names}")
 # Load the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 model = ColorDepthCNN(num_classes=len(class_names)).to(device)
-model.load_state_dict(torch.load("best_model_with_invalid.pth", map_location=device))
+model.load_state_dict(torch.load("/home/tjac/Desktop/360_project/best_model_with_invalid.pth", map_location=device))
 model.eval()
 
 # Define the image transformations
