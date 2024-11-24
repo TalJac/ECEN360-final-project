@@ -7,7 +7,6 @@ import io
 import firebase_admin
 from flask_cors import CORS
 from firebase_admin import credentials, storage
-import pickle
 
 # Suppress irrelevant logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -23,11 +22,11 @@ firebase_admin.initialize_app(cred, {
 })
 
 # Load the trained model
-class ColorDepthCNN(torch.nn.Module):
+class RGBCNN(torch.nn.Module):
     def __init__(self, num_classes):
-        super(ColorDepthCNN, self).__init__()
+        super(RGBCNN, self).__init__()
         self.conv_layers = torch.nn.Sequential(
-            torch.nn.Conv2d(4, 32, kernel_size=3, padding=1),
+            torch.nn.Conv2d(3, 32, kernel_size=3, padding=1),  # Updated for 3 channels
             torch.nn.BatchNorm2d(32),
             torch.nn.ReLU(),
             torch.nn.MaxPool2d(2),
@@ -70,7 +69,7 @@ print(f"Class Names: {class_names}")
 
 # Load the model
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-model = ColorDepthCNN(num_classes=len(class_names)).to(device)
+model = RGBCNN(num_classes=len(class_names)).to(device)
 model.load_state_dict(torch.load(r"/home/tjac/Desktop/360_project/best_rgb_model_with_invalid.pth", map_location=device))
 model.eval()
 
@@ -85,13 +84,7 @@ def load_image(image_file):
     try:
         image_stream = io.BytesIO(image_file.read())
         image = Image.open(image_stream).convert("RGB")  # Ensure RGB format
-        image_tensor = transform(image)
-
-        # Add a dummy depth channel (zeros)
-        depth_channel = torch.zeros((1, image_tensor.shape[1], image_tensor.shape[2]))
-        image_with_depth = torch.cat((image_tensor, depth_channel), dim=0)
-
-        return image_with_depth.unsqueeze(0)  # Add batch dimension
+        return transform(image).unsqueeze(0)  # Add batch dimension
     except Exception as e:
         print(f"Error loading image: {e}")
         return None
